@@ -2,6 +2,8 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { print } from "../../utils/message";
+import { config } from "../../config";
+import { FailFastError } from "../../utils/errors/FailFast";
 
 export default class File {
     /** The file's name with extension */
@@ -69,6 +71,35 @@ export default class File {
                 }
 
                 print.simple(`Created directory: ${this.destination_path}`);
+            });
+        } catch (error) {
+            if (this.isErrNoException(error)) {
+                print.error(error.message);
+            }
+
+            if (config.failFast) {
+                process.exitCode = 1;
+                throw new FailFastError();
+            }
+        }
+    }
+
+    touch() {
+        try {
+            fs.open(this.absolute_path, "w", (newFileError, fd) => {
+                if (newFileError) {
+                    throw newFileError;
+                }
+
+                print.simple(`Created file: ${this.absolute_path}`);
+
+                if (this.text) {
+                    fs.write(fd, this.text, writeError => {
+                        if (writeError) {
+                            throw writeError;
+                        }
+                    });
+                }
             });
         } catch (error) {
             if (this.isErrNoException(error)) {

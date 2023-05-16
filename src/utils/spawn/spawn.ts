@@ -2,7 +2,10 @@ import util from "util";
 import { exec, ExecException } from "child_process";
 import { TSpawn } from "./spawn.types";
 import { print } from "../message";
+import { config } from "../../config";
+import { FailFastError } from "../errors/FailFast";
 
+const { superUserCommand, failFast } = config;
 const execAsPromise = util.promisify(exec);
 
 const spawn: TSpawn = async (
@@ -30,6 +33,11 @@ const spawn: TSpawn = async (
             );
             output = (error as ExecException).message;
             exitCode = (error as ExecException).code ?? 1;
+        }
+
+        if (failFast) {
+            process.exitCode = 1;
+            throw new FailFastError();
         }
 
         return { output, exitCode };
