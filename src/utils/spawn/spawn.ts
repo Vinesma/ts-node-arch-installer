@@ -15,7 +15,13 @@ const spawn: TSpawn = async (
     super_user = false
 ) => {
     try {
-        const childProcess = await execAsPromise(`${name} ${args.join(" ")}`);
+        let command = `${name} ${args.join(" ")}`;
+
+        if (super_user) {
+            command = `${superUserCommand} ${command}`;
+        }
+
+        const childProcess = await execAsPromise(command);
 
         if (!silent) {
             console.log(childProcess.stdout);
