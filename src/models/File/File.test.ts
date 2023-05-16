@@ -2,7 +2,6 @@ import { describe, expect, it, jest } from "@jest/globals";
 import fs from "node:fs";
 import os from "node:os";
 import File from "./File";
-import { beforeEach } from "node:test";
 
 jest.mock("node:fs", () => ({
     mkdir: jest.fn(path => path),
@@ -14,10 +13,6 @@ const HOME = os.homedir();
 const testFile = new File("test.txt", "~/Projects");
 
 describe("A file", () => {
-    beforeEach(() => {
-        jest.resetAllMocks();
-    });
-
     it("should handle '~' in filepaths", () => {
         const expectedPath = `${HOME}/Projects`;
 
