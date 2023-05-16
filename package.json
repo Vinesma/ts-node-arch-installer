@@ -6,6 +6,7 @@
   "scripts": {
     "start": "ts-node index.ts",
     "checkFormat": "prettier --check \"src/**/*.{js,ts}\"",
+    "lint": "eslint src --max-warnings 0",
     "test": "jest"
   },
   "author": "Vinesma",
