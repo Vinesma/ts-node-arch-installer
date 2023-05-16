@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import os from "node:os";
+import path from "node:path";
 import { print } from "../../utils/message";
 
 export default class File {
@@ -17,6 +18,8 @@ export default class File {
     private superUser;
     /** Any comments that should be shown to the user after this file is installed */
     public comments;
+    /** Absolute path to file, created by concatenating destination path + filename */
+    public absolute_path;
 
     private USER_HOME = os.homedir();
 
@@ -36,6 +39,8 @@ export default class File {
         this.text = text ?? "";
         this.createSymlink = createSymlink ?? false;
         this.superUser = superUser ?? false;
+
+        this.absolute_path = path.join(this.destination_path, this.name);
     }
 
     private handleHomePath(rawPath?: string) {
