@@ -8,6 +8,14 @@ import { FailFastError } from "../errors/FailFast";
 const { superUserCommand, failFast } = config;
 const execAsPromise = util.promisify(exec);
 
+const handleArgs = (args: string | string[]) => {
+    if (Array.isArray(args)) {
+        return args.join(" ");
+    } else {
+        return args;
+    }
+};
+
 const spawn: TSpawn = async (
     name,
     args = [],
@@ -15,7 +23,7 @@ const spawn: TSpawn = async (
     super_user = false
 ) => {
     try {
-        let command = `${name} ${args.join(" ")}`;
+        let command = `${name} ${handleArgs(args)}`;
 
         if (super_user) {
             command = `${superUserCommand} ${command}`;
@@ -35,7 +43,7 @@ const spawn: TSpawn = async (
         if (error instanceof Error) {
             print.error(`Error spawning process: ${error}`);
             print.error(
-                `Process called with: ${name} and args: [${args.join(" ")}]`
+                `Process called with: ${name} and args: [${handleArgs(args)}]`
             );
             output = (error as ExecException).message;
             exitCode = (error as ExecException).code ?? 1;

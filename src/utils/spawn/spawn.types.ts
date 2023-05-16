@@ -1,6 +1,6 @@
 export type TSpawn = (
     name: string,
-    args?: Array<string>,
+    args?: Array<string> | string,
     silent?: boolean,
     capture?: boolean,
     super_user?: boolean
