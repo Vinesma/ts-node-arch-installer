@@ -91,7 +91,7 @@ export default class File {
                     throw newFileError;
                 }
 
-                print.simple(`Created file: ${this.absolute_path}`);
+                print.simple(`Created file: ${this.name}`);
 
                 if (this.text) {
                     fs.write(fd, this.text, writeError => {
