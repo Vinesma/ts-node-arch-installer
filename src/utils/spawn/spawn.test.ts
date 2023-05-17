@@ -1,5 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 import spawn from "./spawn";
+import { config } from "../../config";
+
+const { secondsToWaitOnFail } = config;
 
 describe("spawn", () => {
     it("should execute command with arguments", done => {
@@ -17,18 +20,22 @@ describe("spawn", () => {
             });
     });
 
-    it("should fail on invalid command", done => {
-        const command = "false";
-        const args: Array<string> = [];
-        const expectedOutput = "";
+    it(
+        "should fail on invalid command",
+        done => {
+            const command = "false";
+            const args: Array<string> = [];
+            const expectedOutput = "";
 
-        spawn(command, args)
-            .catch(error => {
-                expect(error.exitCode).toBe(1);
-                expect(error.output).toBe(expectedOutput);
-            })
-            .finally(() => {
-                done();
-            });
-    });
+            spawn(command, args)
+                .catch(error => {
+                    expect(error.exitCode).toBe(1);
+                    expect(error.output).toBe(expectedOutput);
+                })
+                .finally(() => {
+                    done();
+                });
+        },
+        1000 * (secondsToWaitOnFail + 5)
+    );
 });
