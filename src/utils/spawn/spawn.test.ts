@@ -1,8 +1,10 @@
-import { describe, expect, it } from "@jest/globals";
+import { describe, expect, it, jest } from "@jest/globals";
 import spawn from "./spawn";
-import { config } from "../../config";
+import timers from "timers/promises";
 
-const { secondsToWaitOnFail } = config;
+const setTimeoutMock = jest
+    .spyOn(timers, "setTimeout")
+    .mockImplementation(() => Promise.resolve());
 
 describe("spawn", () => {
     it("should execute command with arguments", done => {
@@ -20,22 +22,19 @@ describe("spawn", () => {
             });
     });
 
-    it(
-        "should fail on invalid command",
-        done => {
-            const command = "false";
-            const args: Array<string> = [];
-            const expectedOutput = "";
+    it("should fail on invalid command", done => {
+        const command = "false";
+        const args: Array<string> = [];
+        const expectedOutput = "";
 
-            spawn(command, args)
-                .catch(error => {
-                    expect(error.exitCode).toBe(1);
-                    expect(error.output).toBe(expectedOutput);
-                })
-                .finally(() => {
-                    done();
-                });
-        },
-        1000 * (secondsToWaitOnFail + 5)
-    );
+        spawn(command, args)
+            .catch(error => {
+                expect(error.exitCode).toBe(1);
+                expect(error.output).toBe(expectedOutput);
+                expect(setTimeoutMock).toHaveBeenCalledTimes(3);
+            })
+            .finally(() => {
+                done();
+            });
+    });
 });

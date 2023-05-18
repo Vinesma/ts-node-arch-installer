@@ -4,7 +4,7 @@ import { TSpawn } from "./spawn.types";
 import { print } from "../message";
 import { config } from "../../config";
 import { FailFastError } from "../errors/FailFast";
-import { setTimeout as asyncSetTimeout } from "timers/promises";
+import timers from "timers/promises";
 
 const { superUserCommand, failFast, secondsToWaitOnFail } = config;
 const execAsPromise = util.promisify(exec);
@@ -68,7 +68,7 @@ const spawn: TSpawn = async (
                     secondsToWaitOnFail - timeSlice * index
                 } seconds...`
             );
-            await asyncSetTimeout(1000 * timeSlice);
+            await timers.setTimeout(1000 * timeSlice);
         }
 
         return { output, exitCode };
