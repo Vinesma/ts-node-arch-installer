@@ -65,13 +65,9 @@ export default class File {
 
     mkdir() {
         try {
-            fs.mkdir(this.destination_path, { recursive: true }, error => {
-                if (error) {
-                    throw error;
-                }
+            fs.mkdirSync(this.destination_path, { recursive: true });
 
-                print.simple(`Created directory: ${this.destination_path}`);
-            });
+            print.simple(`Created directory: ${this.destination_path}`);
         } catch (error) {
             if (this.isErrNoException(error)) {
                 print.error(error.message);
@@ -86,21 +82,9 @@ export default class File {
 
     touch() {
         try {
-            fs.open(this.absolute_path, "w", (newFileError, fd) => {
-                if (newFileError) {
-                    throw newFileError;
-                }
+            fs.writeFileSync(this.absolute_path, this.text);
 
-                print.simple(`Created file: ${this.name}`);
-
-                if (this.text) {
-                    fs.write(fd, this.text, writeError => {
-                        if (writeError) {
-                            throw writeError;
-                        }
-                    });
-                }
-            });
+            print.simple(`Created file: ${this.name}`);
         } catch (error) {
             if (this.isErrNoException(error)) {
                 print.error(error.message);
