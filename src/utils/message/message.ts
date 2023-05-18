@@ -1,69 +1,42 @@
-import * as readline from "readline/promises";
-import { stdin as input, stdout as output } from "process";
 import {
     TBasicMessage,
     TNumberedMessages,
     IQuestionMessage,
     TChoiceMessage,
 } from "./message.types";
-import {
-    PADDING,
-    BIG_ARROW,
-    SHORT_ARROW,
-    INFO,
-    ALERT,
-    QUESTION,
-} from "./message.const";
+import { PADDING, BIG_ARROW, SHORT_ARROW, INFO, ALERT } from "./message.const";
+import { getUserInput } from "../userInput";
 
 const breakLine = () => {
     console.log("");
-};
-
-const getUserInput = async (text: string) => {
-    const message = `${QUESTION}: ${text}\n`;
-    const rl = readline.createInterface({ input, output });
-    const response = await rl.question(message);
-    rl.close();
-
-    return response;
 };
 
 const headingMessage: TBasicMessage = text => {
     const message = `${PADDING}${BIG_ARROW} ${text}`;
     console.log(message);
     breakLine();
-
-    return message;
 };
 
 const simpleMessage: TBasicMessage = text => {
     const message = `${PADDING}${SHORT_ARROW} ${text}`;
     console.log(message);
-
-    return message;
 };
 
 const infoMessage: TBasicMessage = text => {
     const message = `${PADDING}${INFO}: ${text}`;
     console.log(message);
-
-    return message;
 };
 
 const alertMessage: TBasicMessage = text => {
     const message = `${PADDING}${ALERT}: ${text}`;
     breakLine();
     console.log(message);
-
-    return message;
 };
 
 const errorMessage: TBasicMessage = text => {
     const message = `${PADDING}${ALERT} ERROR: ${text} ${ALERT}`;
     breakLine();
     console.error(message);
-
-    return message;
 };
 
 const numberedMessages: TNumberedMessages = textList => {
@@ -78,7 +51,6 @@ const numberedMessages: TNumberedMessages = textList => {
     });
 
     console.log(message);
-    return message;
 };
 
 const stringQuestionMessage: IQuestionMessage["stringQuestionMessage"] =

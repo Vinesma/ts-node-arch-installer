@@ -1,5 +1,5 @@
-type TBasicMessage = (text: string) => string;
-type TNumberedMessages = (textList: Array<string>) => string;
+type TBasicMessage = (text: string) => void;
+type TNumberedMessages = (textList: Array<string>) => void;
 type TChoiceMessage = (
     choices: string[],
     allowExit?: boolean
