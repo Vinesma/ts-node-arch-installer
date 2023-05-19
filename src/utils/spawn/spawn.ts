@@ -7,7 +7,6 @@ import { FailFastError } from "../errors/FailFast";
 import timers from "timers/promises";
 
 const { superUserCommand, failFast, secondsToWaitOnFail } = config;
-const execAsPromise = util.promisify(exec);
 
 const handleArgs = (args: string | string[]) => {
     if (Array.isArray(args)) {
@@ -23,6 +22,8 @@ const spawn: TSpawn = async (
     silent = false,
     super_user = false
 ) => {
+    const execAsPromise = util.promisify(exec);
+
     try {
         let command = `${name} ${handleArgs(args)}`;
 
