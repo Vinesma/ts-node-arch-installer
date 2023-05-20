@@ -89,6 +89,11 @@ export default class File {
             if (this.isErrNoException(error)) {
                 print.error(error.message);
             }
+
+            if (config.failFast) {
+                process.exitCode = 1;
+                throw new FailFastError();
+            }
         }
     }
 }
