@@ -18,7 +18,8 @@ describe("Installer class", () => {
             installerName,
             installArg,
             syncArg,
-            noConfirmArg
+            noConfirmArg,
+            false
         );
         const installerWithFewerProperties = new Installer(
             installerName,
@@ -31,7 +32,7 @@ describe("Installer class", () => {
             [noConfirmArg, syncArg, ...packagesToInstall],
             false,
             false,
-            true
+            false
         );
         spawnMock.mockReset();
 
