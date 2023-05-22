@@ -4,9 +4,9 @@ import { TSpawn } from "./spawn.types";
 import { print } from "../message";
 import { config } from "../../config";
 import { FailFastError } from "../errors/FailFast";
-import timers from "timers/promises";
+import { haltForUser } from "../haltForUser";
 
-const { superUserCommand, failFast, secondsToWaitOnFail } = config;
+const { superUserCommand, failFast } = config;
 
 const handleArgs = (args: string | string[]) => {
     if (Array.isArray(args)) {
@@ -56,21 +56,7 @@ const spawn: TSpawn = async (
             throw new FailFastError();
         }
 
-        print.info(
-            "Stopping program execution temporarily for user evaluation."
-        );
-
-        const timeSplitInto = 3;
-        const timeSlice = Math.floor(secondsToWaitOnFail / timeSplitInto);
-
-        for (let index = 0; index < timeSplitInto; index++) {
-            print.info(
-                `Program will continue in ${
-                    secondsToWaitOnFail - timeSlice * index
-                } seconds...`
-            );
-            await timers.setTimeout(1000 * timeSlice);
-        }
+        await haltForUser();
 
         return { output, exitCode };
     }
