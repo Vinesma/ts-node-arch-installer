@@ -1,12 +1,16 @@
 import { ExecException } from "child_process";
 import { describe, expect, it, jest } from "@jest/globals";
 import spawn from "./spawn";
-import timers from "timers/promises";
 import util from "util";
 import { config } from "../../config";
 import { FailFastError } from "../errors/FailFast";
+import { haltForUser } from "../haltForUser";
 
 const { superUserCommand } = config;
+
+jest.mock("../haltForUser");
+
+const haltForUserMock = jest.mocked(haltForUser);
 const execAsPromiseMock = jest.fn(() =>
     Promise.resolve({ stdout: "Out", stderr: "Err" })
 );
@@ -15,9 +19,6 @@ const utilMock = jest
     .mockImplementation(() => execAsPromiseMock);
 const logMock = jest.spyOn(console, "log").mockImplementation(text => text);
 const errorMock = jest.spyOn(console, "error").mockImplementation(text => text);
-const setTimeoutMock = jest
-    .spyOn(timers, "setTimeout")
-    .mockImplementation(() => Promise.resolve());
 
 describe("spawn", () => {
     it("should execute command with arguments", done => {
@@ -87,8 +88,8 @@ describe("spawn", () => {
             .then(outProcess => {
                 expect(execAsPromiseMock).toThrow();
                 expect(errorMock).toBeCalledTimes(2);
-                expect(logMock).toBeCalledTimes(6);
-                expect(setTimeoutMock).toBeCalledTimes(3);
+                expect(logMock).toBeCalledTimes(2);
+                expect(haltForUserMock).toBeCalledTimes(1);
                 expect(outProcess.exitCode).toBe(1);
                 expect(outProcess.output).toBe("Test Error");
             })
@@ -110,7 +111,7 @@ describe("spawn", () => {
         output
             .catch(error => {
                 expect(error).toBeInstanceOf(FailFastError);
-                expect(setTimeoutMock).not.toBeCalled();
+                expect(haltForUserMock).not.toBeCalled();
             })
             .finally(done);
     });
