@@ -72,6 +72,7 @@ describe("A file", () => {
             try {
                 testFile.mkdir();
             } catch (error) {
+                process.exitCode = 0;
                 expect(error).toBeInstanceOf(FailFastError);
             } finally {
                 done();
@@ -110,6 +111,7 @@ describe("A file", () => {
             try {
                 testFile.touch();
             } catch (error) {
+                process.exitCode = 0;
                 expect(error).toBeInstanceOf(FailFastError);
             } finally {
                 done();
