@@ -4,6 +4,7 @@ import path from "node:path";
 import { print } from "../../utils/message";
 import { config } from "../../config";
 import { FailFastError } from "../../utils/errors/FailFast";
+import { haltForUser } from "../../utils/haltForUser";
 
 export default class File {
     /** The file's name with extension */
@@ -22,6 +23,7 @@ export default class File {
     public comments;
     /** Absolute path to file, created by concatenating destination path + filename */
     public absolute_path;
+    public absolute_path_source;
 
     private USER_HOME = os.homedir();
 
@@ -43,6 +45,7 @@ export default class File {
         this.superUser = superUser ?? false;
 
         this.absolute_path = path.join(this.destination_path, this.name);
+        this.absolute_path_source = path.join(this.source_path, this.name);
     }
 
     private handleHomePath(rawPath?: string) {
@@ -69,6 +72,10 @@ export default class File {
 
             print.simple(`Created directory: ${this.destination_path}`);
         } catch (error) {
+            print.error(
+                `There was a problem creating a directory at: ${this.destination_path}`
+            );
+
             if (this.isErrNoException(error)) {
                 print.error(error.message);
             }
@@ -77,6 +84,8 @@ export default class File {
                 process.exitCode = 1;
                 throw new FailFastError();
             }
+
+            haltForUser();
         }
     }
 
@@ -84,8 +93,12 @@ export default class File {
         try {
             fs.writeFileSync(this.absolute_path, this.text);
 
-            print.simple(`Created file: ${this.name}`);
+            print.simple(`Created file: ${this.name} at ${this.absolute_path}`);
         } catch (error) {
+            print.error(
+                `There was a problem creating the file: ${this.name} at: ${this.absolute_path}`
+            );
+
             if (this.isErrNoException(error)) {
                 print.error(error.message);
             }
@@ -94,6 +107,8 @@ export default class File {
                 process.exitCode = 1;
                 throw new FailFastError();
             }
+
+            haltForUser();
         }
     }
 }

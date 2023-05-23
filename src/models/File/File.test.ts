@@ -4,6 +4,9 @@ import os from "node:os";
 import File from "./File";
 import { config } from "../../config";
 import { FailFastError } from "../../utils/errors/FailFast";
+import { haltForUser } from "../../utils/haltForUser";
+
+jest.mock("../../utils/haltForUser");
 
 const mkdirMock = jest
     .spyOn(fs, "mkdirSync")
@@ -13,9 +16,11 @@ const writeFileMock = jest
     .mockImplementation((path, text) => ({ path, text }));
 const logMock = jest.spyOn(console, "log").mockImplementation(text => text);
 const errorMock = jest.spyOn(console, "error").mockImplementation(text => text);
+const haltForUserMock = jest.mocked(haltForUser);
 
 const HOME = os.homedir();
 const testFile = new File("test.txt", "~/Projects");
+
 const createIsErrNoExceptionError = () => {
     const error: NodeJS.ErrnoException = new Error();
     error.errno = 1;
@@ -60,7 +65,8 @@ describe("A file", () => {
 
             expect(mkdirMock).toBeCalledTimes(1);
             expect(mkdirMock).toThrow();
-            expect(errorMock).toBeCalledTimes(1);
+            expect(errorMock).toBeCalledTimes(2);
+            expect(haltForUserMock).toBeCalledTimes(1);
         });
 
         it("should fail fast on error when configured so", done => {
@@ -74,6 +80,7 @@ describe("A file", () => {
             } catch (error) {
                 process.exitCode = 0;
                 expect(error).toBeInstanceOf(FailFastError);
+                expect(haltForUserMock).not.toBeCalled();
             } finally {
                 done();
             }
@@ -99,7 +106,8 @@ describe("A file", () => {
 
             expect(writeFileMock).toBeCalledTimes(1);
             expect(writeFileMock).toThrow();
-            expect(errorMock).toBeCalledTimes(1);
+            expect(errorMock).toBeCalledTimes(2);
+            expect(haltForUserMock).toBeCalledTimes(1);
         });
 
         it("should fail fast when configured to do so", done => {
@@ -113,6 +121,7 @@ describe("A file", () => {
             } catch (error) {
                 process.exitCode = 0;
                 expect(error).toBeInstanceOf(FailFastError);
+                expect(haltForUserMock).not.toBeCalled();
             } finally {
                 done();
             }
