@@ -5,6 +5,7 @@ import { print } from "../../utils/message";
 import { config } from "../../config";
 import { FailFastError } from "../../utils/errors/FailFast";
 import { haltForUser } from "../../utils/haltForUser";
+import { spawn } from "../../utils/spawn";
 
 export default class File {
     /** The file's name with extension */
@@ -66,6 +67,19 @@ export default class File {
         );
     }
 
+    private handleFileError(error?: unknown) {
+        if (error && this.isErrNoException(error)) {
+            print.error(error.message);
+        }
+
+        if (config.failFast) {
+            process.exitCode = 1;
+            throw new FailFastError();
+        }
+
+        haltForUser();
+    }
+
     mkdir() {
         try {
             fs.mkdirSync(this.destination_path, { recursive: true });
@@ -76,16 +90,7 @@ export default class File {
                 `There was a problem creating a directory at: ${this.destination_path}`
             );
 
-            if (this.isErrNoException(error)) {
-                print.error(error.message);
-            }
-
-            if (config.failFast) {
-                process.exitCode = 1;
-                throw new FailFastError();
-            }
-
-            haltForUser();
+            this.handleFileError(error);
         }
     }
 
@@ -99,16 +104,38 @@ export default class File {
                 `There was a problem creating the file: ${this.name} at: ${this.absolute_path}`
             );
 
-            if (this.isErrNoException(error)) {
-                print.error(error.message);
+            this.handleFileError(error);
+        }
+    }
+
+    copy() {
+        try {
+            if (!this.source_path) {
+                print.error(
+                    `${this.name} has no source from which to copy from.`
+                );
+
+                this.handleFileError();
+                return;
             }
 
-            if (config.failFast) {
-                process.exitCode = 1;
-                throw new FailFastError();
+            if (this.superUser) {
+                spawn(
+                    "cp",
+                    `-v -- ${this.absolute_path_source} ${this.absolute_path}`,
+                    undefined,
+                    undefined,
+                    true
+                );
+            } else {
+                fs.copyFileSync(this.absolute_path_source, this.absolute_path);
             }
+        } catch (error) {
+            print.error(
+                `There was a problem while copying: ${this.absolute_path_source} to: ${this.absolute_path}`
+            );
 
-            haltForUser();
+            this.handleFileError(error);
         }
     }
 }

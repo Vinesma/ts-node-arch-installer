@@ -5,8 +5,10 @@ import File from "./File";
 import { config } from "../../config";
 import { FailFastError } from "../../utils/errors/FailFast";
 import { haltForUser } from "../../utils/haltForUser";
+import { spawn } from "../../utils/spawn";
 
 jest.mock("../../utils/haltForUser");
+jest.mock("../../utils/spawn");
 
 const mkdirMock = jest
     .spyOn(fs, "mkdirSync")
@@ -14,9 +16,13 @@ const mkdirMock = jest
 const writeFileMock = jest
     .spyOn(fs, "writeFileSync")
     .mockImplementation((path, text) => ({ path, text }));
+const copyFileMock = jest
+    .spyOn(fs, "copyFileSync")
+    .mockImplementation((src, dest) => ({ src, dest }));
 const logMock = jest.spyOn(console, "log").mockImplementation(text => text);
 const errorMock = jest.spyOn(console, "error").mockImplementation(text => text);
 const haltForUserMock = jest.mocked(haltForUser);
+const spawnMock = jest.mocked(spawn);
 
 const HOME = os.homedir();
 const testFile = new File("test.txt", "~/Projects");
@@ -45,6 +51,18 @@ describe("A file", () => {
         const expectedPath = `${HOME}/Projects/test.txt`;
 
         expect(testFile.absolute_path).toBe(expectedPath);
+    });
+
+    it("should handle source paths", () => {
+        const testFileSource = new File(
+            "test.txt",
+            "~/Projects",
+            undefined,
+            "~/.hidden/projects"
+        );
+        const expectedPath = `${HOME}/.hidden/projects/test.txt`;
+
+        expect(testFileSource.absolute_path_source).toBe(expectedPath);
     });
 
     describe("mkdir", () => {
@@ -118,6 +136,100 @@ describe("A file", () => {
 
             try {
                 testFile.touch();
+            } catch (error) {
+                process.exitCode = 0;
+                expect(error).toBeInstanceOf(FailFastError);
+                expect(haltForUserMock).not.toBeCalled();
+            } finally {
+                done();
+            }
+        });
+    });
+
+    describe("copy", () => {
+        it("should copy a file to its destination", () => {
+            const testFileSource = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source"
+            );
+            const expectedSourcePath = `${HOME}/.hidden/source/test.txt`;
+            const expectedDestPath = `${HOME}/Projects/test.txt`;
+
+            testFileSource.copy();
+
+            expect(errorMock).not.toBeCalled();
+            expect(spawnMock).not.toBeCalled();
+            expect(copyFileMock).toBeCalledTimes(1);
+            expect(copyFileMock).toBeCalledWith(
+                expectedSourcePath,
+                expectedDestPath
+            );
+        });
+
+        it("should not copy a file to its destination if there is no source path", () => {
+            const testFileNoSource = new File("test.txt", "~/Projects");
+
+            testFileNoSource.copy();
+
+            expect(errorMock).toBeCalledTimes(1);
+            expect(haltForUserMock).toBeCalledTimes(1);
+            expect(spawnMock).not.toBeCalled();
+            expect(copyFileMock).not.toBeCalled();
+        });
+
+        it("should use cp with super user privileges when superUser is true", () => {
+            const testFileSourceSU = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source",
+                undefined,
+                true
+            );
+            const expectedSourcePath = `${HOME}/.hidden/source/test.txt`;
+            const expectedDestPath = `${HOME}/Projects/test.txt`;
+
+            testFileSourceSU.copy();
+
+            expect(errorMock).not.toBeCalled();
+            expect(copyFileMock).not.toBeCalled();
+            expect(spawnMock).toBeCalledTimes(1);
+            expect(spawnMock).toBeCalledWith(
+                "cp",
+                `-v -- ${expectedSourcePath} ${expectedDestPath}`,
+                undefined,
+                undefined,
+                true
+            );
+        });
+
+        it("should error on fail", () => {
+            const testFileSource = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source"
+            );
+            copyFileMock.mockImplementation(createIsErrNoExceptionError);
+
+            testFileSource.copy();
+
+            expect(copyFileMock).toBeCalledTimes(1);
+            expect(copyFileMock).toThrow();
+            expect(errorMock).toBeCalledTimes(2);
+            expect(haltForUserMock).toBeCalledTimes(1);
+        });
+
+        it("should fail fast when configured to do so", done => {
+            copyFileMock.mockImplementation(() => {
+                throw new Error();
+            });
+            jest.replaceProperty(config, "failFast", true);
+
+            try {
+                testFile.copy();
             } catch (error) {
                 process.exitCode = 0;
                 expect(error).toBeInstanceOf(FailFastError);
