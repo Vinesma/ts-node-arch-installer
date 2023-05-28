@@ -138,4 +138,49 @@ export default class File {
             this.handleFileError(error);
         }
     }
+
+    link() {
+        try {
+            if (!this.source_path) {
+                print.error(
+                    `${this.name} has no source from which to link from.`
+                );
+
+                this.handleFileError();
+                return;
+            }
+
+            if (this.superUser) {
+                spawn(
+                    "ln",
+                    `-sfv -- ${this.absolute_path_source} ${this.absolute_path}`,
+                    undefined,
+                    undefined,
+                    true
+                );
+            } else {
+                fs.symlinkSync(this.absolute_path_source, this.absolute_path);
+            }
+        } catch (error) {
+            if (this.isErrNoException(error) && error.code === "EEXIST") {
+                print.error(
+                    `Cannot link, file already exists at destination. Attempting to remove existing file...`
+                );
+
+                try {
+                    fs.unlinkSync(this.absolute_path);
+                    print.simple(`Removed: ${this.absolute_path}`);
+                    this.link();
+                } catch (error) {
+                    this.handleFileError(error);
+                }
+            } else {
+                print.error(
+                    `There was a problem while linking: ${this.absolute_path_source} to: ${this.absolute_path}`
+                );
+
+                this.handleFileError(error);
+            }
+        }
+    }
 }

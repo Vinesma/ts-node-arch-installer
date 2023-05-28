@@ -15,12 +15,14 @@ const mkdirMock = jest
     .mockImplementation(path => path as string);
 const writeFileMock = jest
     .spyOn(fs, "writeFileSync")
-    .mockImplementation((path, text) => ({ path, text }));
+    .mockImplementation(jest.fn());
 const copyFileMock = jest
     .spyOn(fs, "copyFileSync")
-    .mockImplementation((src, dest) => ({ src, dest }));
-const logMock = jest.spyOn(console, "log").mockImplementation(text => text);
-const errorMock = jest.spyOn(console, "error").mockImplementation(text => text);
+    .mockImplementation(jest.fn());
+const symLinkMock = jest.spyOn(fs, "symlinkSync").mockImplementation(jest.fn());
+const unlinkMock = jest.spyOn(fs, "unlinkSync").mockImplementation(jest.fn());
+const logMock = jest.spyOn(console, "log").mockImplementation(jest.fn());
+const errorMock = jest.spyOn(console, "error").mockImplementation(jest.fn());
 const haltForUserMock = jest.mocked(haltForUser);
 const spawnMock = jest.mocked(spawn);
 
@@ -230,6 +232,127 @@ describe("A file", () => {
 
             try {
                 testFile.copy();
+            } catch (error) {
+                process.exitCode = 0;
+                expect(error).toBeInstanceOf(FailFastError);
+                expect(haltForUserMock).not.toBeCalled();
+            } finally {
+                done();
+            }
+        });
+    });
+
+    describe("link", () => {
+        it("should link a file to its destination", () => {
+            const testFileSource = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source"
+            );
+            const expectedSourcePath = `${HOME}/.hidden/source/test.txt`;
+            const expectedDestPath = `${HOME}/Projects/test.txt`;
+
+            testFileSource.link();
+
+            expect(errorMock).not.toBeCalled();
+            expect(spawnMock).not.toBeCalled();
+            expect(symLinkMock).toBeCalledTimes(1);
+            expect(symLinkMock).toBeCalledWith(
+                expectedSourcePath,
+                expectedDestPath
+            );
+        });
+
+        it("should not link a file to its destination if there is no source path", () => {
+            const testFileNoSource = new File("test.txt", "~/Projects");
+
+            testFileNoSource.link();
+
+            expect(errorMock).toBeCalledTimes(1);
+            expect(haltForUserMock).toBeCalledTimes(1);
+            expect(spawnMock).not.toBeCalled();
+            expect(symLinkMock).not.toBeCalled();
+        });
+
+        it("should use ln with super user privileges when superUser is true", () => {
+            const testFileSourceSU = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source",
+                undefined,
+                true
+            );
+            const expectedSourcePath = `${HOME}/.hidden/source/test.txt`;
+            const expectedDestPath = `${HOME}/Projects/test.txt`;
+
+            testFileSourceSU.link();
+
+            expect(errorMock).not.toBeCalled();
+            expect(symLinkMock).not.toBeCalled();
+            expect(spawnMock).toBeCalledTimes(1);
+            expect(spawnMock).toBeCalledWith(
+                "ln",
+                `-sfv -- ${expectedSourcePath} ${expectedDestPath}`,
+                undefined,
+                undefined,
+                true
+            );
+        });
+
+        it("should error on fail", () => {
+            const testFileSource = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source"
+            );
+            symLinkMock.mockImplementation(createIsErrNoExceptionError);
+
+            testFileSource.link();
+
+            expect(symLinkMock).toBeCalledTimes(1);
+            expect(symLinkMock).toThrow();
+            expect(errorMock).toBeCalledTimes(2);
+            expect(haltForUserMock).toBeCalledTimes(1);
+        });
+
+        it("should retry linking when error is EEXIST and target file can be removed", () => {
+            const testFileSource = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source"
+            );
+            symLinkMock
+                .mockImplementation(jest.fn())
+                .mockImplementationOnce(() => {
+                    const error: NodeJS.ErrnoException = new Error();
+                    error.errno = 1;
+                    error.code = "EEXIST";
+                    error.path = "error path";
+                    error.syscall = "syscall";
+                    throw error;
+                });
+
+            testFileSource.link();
+
+            expect(unlinkMock).toBeCalledTimes(1);
+            expect(symLinkMock).toBeCalledTimes(2);
+            expect(logMock).toBeCalledTimes(2);
+            expect(errorMock).toBeCalledTimes(1);
+            expect(haltForUserMock).not.toBeCalled();
+        });
+
+        it("should fail fast when configured to do so", done => {
+            symLinkMock.mockImplementation(() => {
+                throw new Error();
+            });
+            jest.replaceProperty(config, "failFast", true);
+
+            try {
+                testFile.link();
             } catch (error) {
                 process.exitCode = 0;
                 expect(error).toBeInstanceOf(FailFastError);
