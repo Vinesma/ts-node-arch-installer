@@ -183,4 +183,27 @@ export default class File {
             }
         }
     }
+
+    showComments() {
+        this.comments.forEach((comment, index) => {
+            if (index === 0) {
+                print.heading(`[${this.name}]`);
+            }
+            print.info(comment);
+        });
+    }
+
+    configure() {
+        this.mkdir();
+
+        if (this.createSymlink) {
+            this.link();
+        } else if (this.source_path) {
+            this.copy();
+        } else {
+            this.touch();
+        }
+
+        this.showComments();
+    }
 }

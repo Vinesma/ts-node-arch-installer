@@ -362,4 +362,78 @@ describe("A file", () => {
             }
         });
     });
+
+    describe("showComments", () => {
+        it("should display all comments that the file has", () => {
+            const comments = ["One Comment", "Two Comment"];
+            const testFileComment = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source",
+                undefined,
+                undefined,
+                comments
+            );
+
+            testFileComment.showComments();
+
+            expect(logMock).toBeCalledTimes(2 + comments.length);
+        });
+
+        it("should not display anything if file has no comments", () => {
+            const testFileComment = new File("test.txt", "~/Projects");
+
+            testFileComment.showComments();
+
+            expect(logMock).not.toBeCalled();
+        });
+    });
+
+    describe("configure", () => {
+        it("should always make a directory", () => {
+            testFile.configure();
+
+            expect(mkdirMock).toBeCalled();
+        });
+
+        it("should create only a symlink when createSymlink is true", () => {
+            const testFileSource = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source",
+                true
+            );
+
+            testFileSource.configure();
+
+            expect(symLinkMock).toBeCalled();
+            expect(copyFileMock).not.toBeCalled();
+            expect(writeFileMock).not.toBeCalled();
+        });
+
+        it("should copy the file only if createSymlink is false but there is a source path", () => {
+            const testFileSource = new File(
+                "test.txt",
+                "~/Projects",
+                undefined,
+                "~/.hidden/source"
+            );
+
+            testFileSource.configure();
+
+            expect(copyFileMock).toBeCalled();
+            expect(symLinkMock).not.toBeCalled();
+            expect(writeFileMock).not.toBeCalled();
+        });
+
+        it("should create the file only if createSymlink is false and there is no source path", () => {
+            testFile.configure();
+
+            expect(writeFileMock).toBeCalled();
+            expect(symLinkMock).not.toBeCalled();
+            expect(copyFileMock).not.toBeCalled();
+        });
+    });
 });
