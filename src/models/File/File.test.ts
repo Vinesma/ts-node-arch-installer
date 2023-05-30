@@ -46,13 +46,13 @@ describe("A file", () => {
     it("should handle '~' in filepaths", () => {
         const expectedPath = `${HOME}/Projects`;
 
-        expect(testFile.destination_path).toBe(expectedPath);
+        expect(testFile.destinationPath).toBe(expectedPath);
     });
 
     it("should handle absolute paths", () => {
         const expectedPath = `${HOME}/Projects/test.txt`;
 
-        expect(testFile.absolute_path).toBe(expectedPath);
+        expect(testFile.absolutePathDestination).toBe(expectedPath);
     });
 
     it("should handle source paths", () => {
@@ -64,7 +64,7 @@ describe("A file", () => {
         );
         const expectedPath = `${HOME}/.hidden/projects/test.txt`;
 
-        expect(testFileSource.absolute_path_source).toBe(expectedPath);
+        expect(testFileSource.absolutePathSource).toBe(expectedPath);
     });
 
     describe("mkdir", () => {
@@ -72,7 +72,7 @@ describe("A file", () => {
             testFile.mkdir();
 
             expect(mkdirMock).toBeCalledTimes(1);
-            expect(mkdirMock).toBeCalledWith(testFile.destination_path, {
+            expect(mkdirMock).toBeCalledWith(testFile.destinationPath, {
                 recursive: true,
             });
             expect(logMock).toBeCalledTimes(1);
@@ -113,7 +113,7 @@ describe("A file", () => {
 
             expect(writeFileMock).toBeCalledTimes(1);
             expect(writeFileMock).toBeCalledWith(
-                testFile.absolute_path,
+                testFile.absolutePathDestination,
                 testFile.text
             );
             expect(logMock).toBeCalledTimes(1);

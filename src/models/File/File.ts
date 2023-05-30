@@ -11,9 +11,9 @@ export default class File {
     /** The file's name with extension */
     public name;
     /** The path to where the file is stored */
-    public source_path;
+    public sourcePath;
     /** The path to where the file should go/be linked to */
-    public destination_path;
+    public destinationPath;
     /** Text that the file should store, can be empty */
     public text;
     /** Should this file be symlinked source -> destination? If false it will be copied */
@@ -23,8 +23,9 @@ export default class File {
     /** Any comments that should be shown to the user after this file is installed */
     public comments;
     /** Absolute path to file, created by concatenating destination path + filename */
-    public absolute_path;
-    public absolute_path_source;
+    public absolutePathDestination;
+    /** Absolute path to source file, created by concatenating source path + filename */
+    public absolutePathSource;
 
     private USER_HOME = os.homedir();
 
@@ -38,15 +39,18 @@ export default class File {
         comments: Array<string> = []
     ) {
         this.name = name;
-        this.destination_path = this.handleHomePath(destination_path);
-        this.source_path = this.handleHomePath(source_path);
+        this.destinationPath = this.handleHomePath(destination_path);
+        this.sourcePath = this.handleHomePath(source_path);
         this.comments = comments;
         this.text = text ?? "";
         this.createSymlink = createSymlink ?? false;
         this.superUser = superUser ?? false;
 
-        this.absolute_path = path.join(this.destination_path, this.name);
-        this.absolute_path_source = path.join(this.source_path, this.name);
+        this.absolutePathDestination = path.join(
+            this.destinationPath,
+            this.name
+        );
+        this.absolutePathSource = path.join(this.sourcePath, this.name);
     }
 
     private handleHomePath(rawPath?: string) {
@@ -82,12 +86,12 @@ export default class File {
 
     mkdir() {
         try {
-            fs.mkdirSync(this.destination_path, { recursive: true });
+            fs.mkdirSync(this.destinationPath, { recursive: true });
 
-            print.simple(`Created directory: ${this.destination_path}`);
+            print.simple(`Created directory: ${this.destinationPath}`);
         } catch (error) {
             print.error(
-                `There was a problem creating a directory at: ${this.destination_path}`
+                `There was a problem creating a directory at: ${this.destinationPath}`
             );
 
             this.handleFileError(error);
@@ -96,12 +100,14 @@ export default class File {
 
     touch() {
         try {
-            fs.writeFileSync(this.absolute_path, this.text);
+            fs.writeFileSync(this.absolutePathDestination, this.text);
 
-            print.simple(`Created file: ${this.name} at ${this.absolute_path}`);
+            print.simple(
+                `Created file: ${this.name} at ${this.absolutePathDestination}`
+            );
         } catch (error) {
             print.error(
-                `There was a problem creating the file: ${this.name} at: ${this.absolute_path}`
+                `There was a problem creating the file: ${this.name} at: ${this.absolutePathDestination}`
             );
 
             this.handleFileError(error);
@@ -110,7 +116,7 @@ export default class File {
 
     copy() {
         try {
-            if (!this.source_path) {
+            if (!this.sourcePath) {
                 print.error(
                     `${this.name} has no source from which to copy from.`
                 );
@@ -122,17 +128,20 @@ export default class File {
             if (this.superUser) {
                 spawn(
                     "cp",
-                    `-v -- ${this.absolute_path_source} ${this.absolute_path}`,
+                    `-v -- ${this.absolutePathSource} ${this.absolutePathDestination}`,
                     undefined,
                     undefined,
                     true
                 );
             } else {
-                fs.copyFileSync(this.absolute_path_source, this.absolute_path);
+                fs.copyFileSync(
+                    this.absolutePathSource,
+                    this.absolutePathDestination
+                );
             }
         } catch (error) {
             print.error(
-                `There was a problem while copying: ${this.absolute_path_source} to: ${this.absolute_path}`
+                `There was a problem while copying: ${this.absolutePathSource} to: ${this.absolutePathDestination}`
             );
 
             this.handleFileError(error);
@@ -141,7 +150,7 @@ export default class File {
 
     link() {
         try {
-            if (!this.source_path) {
+            if (!this.sourcePath) {
                 print.error(
                     `${this.name} has no source from which to link from.`
                 );
@@ -153,13 +162,16 @@ export default class File {
             if (this.superUser) {
                 spawn(
                     "ln",
-                    `-sfv -- ${this.absolute_path_source} ${this.absolute_path}`,
+                    `-sfv -- ${this.absolutePathSource} ${this.absolutePathDestination}`,
                     undefined,
                     undefined,
                     true
                 );
             } else {
-                fs.symlinkSync(this.absolute_path_source, this.absolute_path);
+                fs.symlinkSync(
+                    this.absolutePathSource,
+                    this.absolutePathDestination
+                );
             }
         } catch (error) {
             if (this.isErrNoException(error) && error.code === "EEXIST") {
@@ -168,15 +180,15 @@ export default class File {
                 );
 
                 try {
-                    fs.unlinkSync(this.absolute_path);
-                    print.simple(`Removed: ${this.absolute_path}`);
+                    fs.unlinkSync(this.absolutePathDestination);
+                    print.simple(`Removed: ${this.absolutePathDestination}`);
                     this.link();
                 } catch (error) {
                     this.handleFileError(error);
                 }
             } else {
                 print.error(
-                    `There was a problem while linking: ${this.absolute_path_source} to: ${this.absolute_path}`
+                    `There was a problem while linking: ${this.absolutePathSource} to: ${this.absolutePathDestination}`
                 );
 
                 this.handleFileError(error);
@@ -198,7 +210,7 @@ export default class File {
 
         if (this.createSymlink) {
             this.link();
-        } else if (this.source_path) {
+        } else if (this.sourcePath) {
             this.copy();
         } else {
             this.touch();
