@@ -14,17 +14,15 @@ describe("Installer class", () => {
     const packagesToInstall = ["program1", "program2"];
 
     it("should sync repositories with the correct arguments", () => {
-        const installer = new Installer(
-            installerName,
+        const installer = new Installer(installerName, {
             installArg,
             syncArg,
             noConfirmArg,
-            false
-        );
-        const installerWithFewerProperties = new Installer(
-            installerName,
-            installArg
-        );
+            superUser: false,
+        });
+        const installerWithFewerProperties = new Installer(installerName, {
+            installArg,
+        });
 
         installer.sync(packagesToInstall);
         expect(spawnMock).toBeCalledWith(
@@ -47,16 +45,14 @@ describe("Installer class", () => {
     });
 
     it("should install packages with the correct arguments", () => {
-        const installer = new Installer(
-            installerName,
+        const installer = new Installer(installerName, {
             installArg,
             syncArg,
-            noConfirmArg
-        );
-        const installerWithFewerProperties = new Installer(
-            installerName,
-            installArg
-        );
+            noConfirmArg,
+        });
+        const installerWithFewerProperties = new Installer(installerName, {
+            installArg,
+        });
 
         installer.install(packagesToInstall);
         expect(spawnMock).toBeCalledWith(

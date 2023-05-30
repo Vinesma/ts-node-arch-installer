@@ -5,20 +5,22 @@ class Installer {
     protected syncArg;
     protected installArg;
     protected noConfirmArg;
-    protected needSuperUser;
+    protected superUser;
 
     constructor(
         name: string,
-        installArg: string,
-        syncArg?: string,
-        noConfirmArg?: string,
-        needSuperUser?: boolean
+        options: {
+            installArg: string;
+            syncArg?: string;
+            noConfirmArg?: string;
+            superUser?: boolean;
+        }
     ) {
         this.name = name;
-        this.installArg = installArg;
-        this.syncArg = syncArg ?? "";
-        this.noConfirmArg = noConfirmArg ?? "";
-        this.needSuperUser = needSuperUser ?? true;
+        this.installArg = options.installArg;
+        this.syncArg = options?.syncArg ?? "";
+        this.noConfirmArg = options?.noConfirmArg ?? "";
+        this.superUser = options?.superUser ?? true;
     }
 
     /**
@@ -32,7 +34,7 @@ class Installer {
             [this.noConfirmArg, this.syncArg, ...args],
             false,
             false,
-            this.needSuperUser
+            this.superUser
         );
     }
 
@@ -47,7 +49,7 @@ class Installer {
             [this.noConfirmArg, this.installArg, ...args],
             false,
             false,
-            this.needSuperUser
+            this.superUser
         );
     }
 }
