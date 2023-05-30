@@ -1,11 +1,19 @@
+import { config } from "../../config";
 import { spawn } from "../../utils/spawn";
 
-class Installer {
+export default class Installer {
     protected name;
     protected syncArg;
     protected installArg;
     protected noConfirmArg;
     protected superUser;
+
+    static NAME = {
+        AUR: config.AURHelper,
+        PACMAN: config.defaultInstaller,
+        FLATPAK: "flatpak",
+        PIP: "pip",
+    };
 
     constructor(
         name: string,
@@ -53,5 +61,3 @@ class Installer {
         );
     }
 }
-
-export default Installer;

@@ -2,7 +2,7 @@ import { Installer } from "../Installer";
 
 class Pacman extends Installer {
     constructor() {
-        super("pacman", {
+        super(Installer.NAME.PACMAN, {
             installArg: "-S",
             syncArg: "-Syu",
             noConfirmArg: "--noconfirm",
