@@ -21,13 +21,33 @@ const copyFileMock = jest
     .mockImplementation(jest.fn());
 const symLinkMock = jest.spyOn(fs, "symlinkSync").mockImplementation(jest.fn());
 const unlinkMock = jest.spyOn(fs, "unlinkSync").mockImplementation(jest.fn());
+const statMock = jest.spyOn(fs, "statSync").mockImplementation(
+    () =>
+        ({
+            isDirectory: () => true,
+        } as unknown as ReturnType<fs.StatSyncFn>)
+);
 const logMock = jest.spyOn(console, "log").mockImplementation(jest.fn());
 const errorMock = jest.spyOn(console, "error").mockImplementation(jest.fn());
 const haltForUserMock = jest.mocked(haltForUser);
 const spawnMock = jest.mocked(spawn);
 
 const HOME = os.homedir();
-const testFile = new File("test.txt", "~/Projects");
+const testFile = new File("test.txt", { pathDestination: "~/Projects" });
+const testFileSource = new File("test.txt", {
+    pathDestination: "~/Projects",
+    pathSource: "~/.hidden/projects",
+});
+const testFileSourceSU = new File("test.txt", {
+    pathDestination: "~/Projects",
+    pathSource: "~/.hidden/projects",
+    superUser: true,
+});
+const testFileSourceLink = new File("test.txt", {
+    pathDestination: "~/Projects",
+    pathSource: "~/.hidden/projects",
+    createSymlink: true,
+});
 
 const createIsErrNoExceptionError = () => {
     const error: NodeJS.ErrnoException = new Error();
@@ -46,7 +66,7 @@ describe("A file", () => {
     it("should handle '~' in filepaths", () => {
         const expectedPath = `${HOME}/Projects`;
 
-        expect(testFile.destinationPath).toBe(expectedPath);
+        expect(testFile.pathDestination).toBe(expectedPath);
     });
 
     it("should handle absolute paths", () => {
@@ -56,12 +76,6 @@ describe("A file", () => {
     });
 
     it("should handle source paths", () => {
-        const testFileSource = new File(
-            "test.txt",
-            "~/Projects",
-            undefined,
-            "~/.hidden/projects"
-        );
         const expectedPath = `${HOME}/.hidden/projects/test.txt`;
 
         expect(testFileSource.absolutePathSource).toBe(expectedPath);
@@ -72,7 +86,7 @@ describe("A file", () => {
             testFile.mkdir();
 
             expect(mkdirMock).toBeCalledTimes(1);
-            expect(mkdirMock).toBeCalledWith(testFile.destinationPath, {
+            expect(mkdirMock).toBeCalledWith(testFile.pathDestination, {
                 recursive: true,
             });
             expect(logMock).toBeCalledTimes(1);
@@ -150,13 +164,7 @@ describe("A file", () => {
 
     describe("copy", () => {
         it("should copy a file to its destination", () => {
-            const testFileSource = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source"
-            );
-            const expectedSourcePath = `${HOME}/.hidden/source/test.txt`;
+            const expectedSourcePath = `${HOME}/.hidden/projects/test.txt`;
             const expectedDestPath = `${HOME}/Projects/test.txt`;
 
             testFileSource.copy();
@@ -171,9 +179,7 @@ describe("A file", () => {
         });
 
         it("should not copy a file to its destination if there is no source path", () => {
-            const testFileNoSource = new File("test.txt", "~/Projects");
-
-            testFileNoSource.copy();
+            testFile.copy();
 
             expect(errorMock).toBeCalledTimes(1);
             expect(haltForUserMock).toBeCalledTimes(1);
@@ -182,15 +188,7 @@ describe("A file", () => {
         });
 
         it("should use cp with super user privileges when superUser is true", () => {
-            const testFileSourceSU = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source",
-                undefined,
-                true
-            );
-            const expectedSourcePath = `${HOME}/.hidden/source/test.txt`;
+            const expectedSourcePath = `${HOME}/.hidden/projects/test.txt`;
             const expectedDestPath = `${HOME}/Projects/test.txt`;
 
             testFileSourceSU.copy();
@@ -208,12 +206,6 @@ describe("A file", () => {
         });
 
         it("should error on fail", () => {
-            const testFileSource = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source"
-            );
             copyFileMock.mockImplementation(createIsErrNoExceptionError);
 
             testFileSource.copy();
@@ -244,13 +236,7 @@ describe("A file", () => {
 
     describe("link", () => {
         it("should link a file to its destination", () => {
-            const testFileSource = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source"
-            );
-            const expectedSourcePath = `${HOME}/.hidden/source/test.txt`;
+            const expectedSourcePath = `${HOME}/.hidden/projects/test.txt`;
             const expectedDestPath = `${HOME}/Projects/test.txt`;
 
             testFileSource.link();
@@ -265,9 +251,7 @@ describe("A file", () => {
         });
 
         it("should not link a file to its destination if there is no source path", () => {
-            const testFileNoSource = new File("test.txt", "~/Projects");
-
-            testFileNoSource.link();
+            testFile.link();
 
             expect(errorMock).toBeCalledTimes(1);
             expect(haltForUserMock).toBeCalledTimes(1);
@@ -276,15 +260,7 @@ describe("A file", () => {
         });
 
         it("should use ln with super user privileges when superUser is true", () => {
-            const testFileSourceSU = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source",
-                undefined,
-                true
-            );
-            const expectedSourcePath = `${HOME}/.hidden/source/test.txt`;
+            const expectedSourcePath = `${HOME}/.hidden/projects/test.txt`;
             const expectedDestPath = `${HOME}/Projects/test.txt`;
 
             testFileSourceSU.link();
@@ -302,12 +278,6 @@ describe("A file", () => {
         });
 
         it("should error on fail", () => {
-            const testFileSource = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source"
-            );
             symLinkMock.mockImplementation(createIsErrNoExceptionError);
 
             testFileSource.link();
@@ -319,12 +289,6 @@ describe("A file", () => {
         });
 
         it("should retry linking when error is EEXIST and target file can be removed", () => {
-            const testFileSource = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source"
-            );
             symLinkMock
                 .mockImplementation(jest.fn())
                 .mockImplementationOnce(() => {
@@ -366,15 +330,10 @@ describe("A file", () => {
     describe("showComments", () => {
         it("should display all comments that the file has", () => {
             const comments = ["One Comment", "Two Comment"];
-            const testFileComment = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source",
-                undefined,
-                undefined,
-                comments
-            );
+            const testFileComment = new File("test.txt", {
+                pathDestination: "~/Projects",
+                comments,
+            });
 
             testFileComment.showComments();
 
@@ -382,9 +341,7 @@ describe("A file", () => {
         });
 
         it("should not display anything if file has no comments", () => {
-            const testFileComment = new File("test.txt", "~/Projects");
-
-            testFileComment.showComments();
+            testFile.showComments();
 
             expect(logMock).not.toBeCalled();
         });
@@ -398,15 +355,7 @@ describe("A file", () => {
         });
 
         it("should create only a symlink when createSymlink is true", () => {
-            const testFileSource = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source",
-                true
-            );
-
-            testFileSource.configure();
+            testFileSourceLink.configure();
 
             expect(symLinkMock).toBeCalled();
             expect(copyFileMock).not.toBeCalled();
@@ -414,13 +363,6 @@ describe("A file", () => {
         });
 
         it("should copy the file only if createSymlink is false but there is a source path", () => {
-            const testFileSource = new File(
-                "test.txt",
-                "~/Projects",
-                undefined,
-                "~/.hidden/source"
-            );
-
             testFileSource.configure();
 
             expect(copyFileMock).toBeCalled();
@@ -434,6 +376,59 @@ describe("A file", () => {
             expect(writeFileMock).toBeCalled();
             expect(symLinkMock).not.toBeCalled();
             expect(copyFileMock).not.toBeCalled();
+        });
+    });
+
+    describe("checkErrors", () => {
+        it("should alert when destination doesn't exist", () => {
+            statMock.mockImplementation(
+                () =>
+                    ({
+                        isDirectory: () => false,
+                    } as unknown as ReturnType<fs.StatSyncFn>)
+            );
+
+            const errors = testFile.checkErrors();
+
+            expect(logMock).toBeCalledTimes(2);
+            expect(errors).toBe(1);
+        });
+
+        it("should alert when source and file doesn't exist", () => {
+            statMock
+                .mockImplementation(
+                    () =>
+                        ({
+                            isDirectory: () => false,
+                            isFile: () => false,
+                        } as unknown as ReturnType<fs.StatSyncFn>)
+                )
+                .mockImplementationOnce(
+                    () =>
+                        ({
+                            isDirectory: () => true,
+                        } as unknown as ReturnType<fs.StatSyncFn>)
+                );
+
+            const errors = testFileSource.checkErrors();
+
+            expect(logMock).toBeCalledTimes(4);
+            expect(errors).toBe(2);
+        });
+
+        it("should alert of useless use of super user privileges", () => {
+            statMock.mockImplementation(
+                () =>
+                    ({
+                        isDirectory: () => true,
+                        isFile: () => true,
+                    } as unknown as ReturnType<fs.StatSyncFn>)
+            );
+
+            const errors = testFileSourceSU.checkErrors();
+
+            expect(logMock).toBeCalledTimes(2);
+            expect(errors).toBe(1);
         });
     });
 });

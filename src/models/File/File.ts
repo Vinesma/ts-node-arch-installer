@@ -11,9 +11,9 @@ export default class File {
     /** The file's name with extension */
     public name;
     /** The path to where the file is stored */
-    public sourcePath;
+    public pathSource;
     /** The path to where the file should go/be linked to */
-    public destinationPath;
+    public pathDestination;
     /** Text that the file should store, can be empty */
     public text;
     /** Should this file be symlinked source -> destination? If false it will be copied */
@@ -31,26 +31,28 @@ export default class File {
 
     constructor(
         name: string,
-        destination_path: string,
-        text?: string,
-        source_path?: string,
-        createSymlink?: boolean,
-        superUser?: boolean,
-        comments: Array<string> = []
+        options: {
+            pathDestination: string;
+            pathSource?: string;
+            text?: string;
+            comments?: string[];
+            createSymlink?: boolean;
+            superUser?: boolean;
+        }
     ) {
         this.name = name;
-        this.destinationPath = this.handleHomePath(destination_path);
-        this.sourcePath = this.handleHomePath(source_path);
-        this.comments = comments;
-        this.text = text ?? "";
-        this.createSymlink = createSymlink ?? false;
-        this.superUser = superUser ?? false;
+        this.pathDestination = this.handleHomePath(options.pathDestination);
+        this.pathSource = this.handleHomePath(options?.pathSource);
+        this.comments = options?.comments ?? [];
+        this.text = options?.text ?? "";
+        this.createSymlink = options?.createSymlink ?? false;
+        this.superUser = options?.superUser ?? false;
 
         this.absolutePathDestination = path.join(
-            this.destinationPath,
+            this.pathDestination,
             this.name
         );
-        this.absolutePathSource = path.join(this.sourcePath, this.name);
+        this.absolutePathSource = path.join(this.pathSource, this.name);
     }
 
     private handleHomePath(rawPath?: string) {
@@ -84,14 +86,30 @@ export default class File {
         haltForUser();
     }
 
+    private isDirectory(path: fs.PathLike) {
+        try {
+            return fs.statSync(path).isDirectory();
+        } catch (error) {
+            return false;
+        }
+    }
+
+    private isFile(path: fs.PathLike) {
+        try {
+            return fs.statSync(path).isFile();
+        } catch (error) {
+            return false;
+        }
+    }
+
     mkdir() {
         try {
-            fs.mkdirSync(this.destinationPath, { recursive: true });
+            fs.mkdirSync(this.pathDestination, { recursive: true });
 
-            print.simple(`Created directory: ${this.destinationPath}`);
+            print.simple(`Created directory: ${this.pathDestination}`);
         } catch (error) {
             print.error(
-                `There was a problem creating a directory at: ${this.destinationPath}`
+                `There was a problem creating a directory at: ${this.pathDestination}`
             );
 
             this.handleFileError(error);
@@ -116,7 +134,7 @@ export default class File {
 
     copy() {
         try {
-            if (!this.sourcePath) {
+            if (!this.pathSource) {
                 print.error(
                     `${this.name} has no source from which to copy from.`
                 );
@@ -150,7 +168,7 @@ export default class File {
 
     link() {
         try {
-            if (!this.sourcePath) {
+            if (!this.pathSource) {
                 print.error(
                     `${this.name} has no source from which to link from.`
                 );
@@ -210,12 +228,52 @@ export default class File {
 
         if (this.createSymlink) {
             this.link();
-        } else if (this.sourcePath) {
+        } else if (this.pathSource) {
             this.copy();
         } else {
             this.touch();
         }
 
         this.showComments();
+    }
+
+    checkErrors() {
+        let errorsFound = 0;
+
+        // Check if destination exists and is a directory
+        if (!this.isDirectory(this.pathDestination)) {
+            print.alert(
+                `FILE [${this.name}]: '${this.pathDestination}' is not a known directory.`
+            );
+            errorsFound++;
+        }
+
+        // Check if source exists and is a directory
+        // Also check file, if it exists and is a file
+        if (this.pathSource) {
+            if (!this.isDirectory(this.pathSource)) {
+                print.alert(
+                    `FILE [${this.name}]: ${this.pathSource} is not a known directory.`
+                );
+                errorsFound++;
+            }
+
+            if (!this.isFile(this.absolutePathSource)) {
+                print.alert(
+                    `FILE [${this.name}]: at ${this.absolutePathSource} does not exist.`
+                );
+                errorsFound++;
+            }
+        }
+
+        // Test if sudo is really needed if the file's destination is a directory owned by the user
+        if (this.pathDestination.includes(this.USER_HOME) && this.superUser) {
+            print.alert(
+                `FILE [${this.name}]: Super user privileges may be unnecessary as ${this.pathDestination} is in your home path.`
+            );
+            errorsFound++;
+        }
+
+        return errorsFound;
     }
 }
