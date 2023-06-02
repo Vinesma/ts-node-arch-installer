@@ -30,3 +30,4 @@ jobs:
     - run: npm test
     - run: npm run lint
     - run: npm run checkFormat
+    - run: npm run compile

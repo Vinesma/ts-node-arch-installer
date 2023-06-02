@@ -7,6 +7,7 @@
     "start": "ts-node index.ts",
     "checkFormat": "prettier --check \"src/**/*.{js,ts}\"",
     "lint": "eslint src --max-warnings 0",
+    "compile": "tsc --noEmit",
     "test": "jest"
   },
   "author": "Vinesma",
